@@ -1,0 +1,51 @@
+---
+title: "Penguin Size Comparisons"
+author: "Lindsay Hafen"
+date: "11/15/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(palmerpenguins)
+library(effsize)
+library(broom)
+library(ggbeeswarm)
+library(car)
+```
+
+# Part 1. T-tests
+-Compare means between 2 groups - enough evidence to make us think that the data is drawn from populaitons with different means?
+- Mass comparison between male and female chinstrap penguins
+
+- Could filter male and females to make histograms, but ggplot can do that for us with the facet capability
+
+- QQ plot compare our sample to data if it were perfectly drawn from a population with perfectly normal distribution (closer to straight line = closer to normal dist)
+
+```{r}
+chinstraps <- penguins %>% 
+  filter(species == "Chinstrap")
+
+# Histograms
+ggplot(chinstraps, aes(x = body_mass_g)) +
+  geom_histogram(bins = 10, fill = "darkmagenta", color = "black") +
+  facet_wrap(~ sex)
+
+## QQ plot:
+ggplot(chinstraps, aes(sample = body_mass_g)) +
+  geom_qq() +
+  facet_wrap(~ sex)
+
+# Descriptive statistics 
+chinstraps %>% 
+  group_by(sex) %>% 
+  summarize(mean_mass = mean(body_mass_g),
+            median_mass = median(body_mass_g),
+            sd_mass = sd(body_mass_g),
+            sample_size = n())
+  
+
+
+```
+
