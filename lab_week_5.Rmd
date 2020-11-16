@@ -84,6 +84,120 @@ cohen.d(chinstraps_m, chinstraps_f)
 t.test(chinstraps_m, chinstraps_f, alternative = "greater") #greater or less depends on the order of vectors in the t.test function = in this case males>females
 ```
 
+# One way ANOVA and beeswarm graph mean w/ error bars shown
+
+- One way = single factor
+- Three or more groups
+- Mean flipper length between 3 species, only female
+
+### Table of counts by species and sex
+
+- Could group_by(species, sex) %>% summarize(n())
+OR 
+- Penguin counts:
+
+```{r}
+penguin_counts <- penguins %>% 
+  count(species, sex)
+
+penguin_counts
+```
+
+Create a subset of only female penguins:
+
+```{r}
+penguins_f <- penguins %>% 
+  filter(sex == "female")
+
+ggplot(data = penguins_f, aes(x = flipper_length_mm)) +
+  geom_histogram(bins = 20, aes(fill = species)) + # One option using fill to separate
+  facet_wrap(~ species, scales = "free") # Default scales ea. the same, if want ea pannel to have different x and y axis limits, then scales = "free"
+
+ggplot(data = penguins_f, aes(sample = flipper_length_mm)) +
+  geom_qq(aes(color = species)) +
+  facet_wrap(~ species, scales = "free") # similar code to above = can copy paste and change
+```
+
+### Summary stats, check for equal variances here too
+
+-Starting from penguins_f, create a summary table that groups by species and returns:
+-mean of flipper length
+-sd of flipper_length_mm
+-sample size
+-variance 'var' 
+-standard error = sd/sqrt(n)
+
+- Guideline: if your largest var for a group is less than 4x greater than smallest var for a group, then var is close enough to perform ANOVA
+
+```{r}
+penguins_f_summary <- penguins_f %>% 
+  group_by(species) %>% 
+  summarize(mean_flipper_length = mean(flipper_length_mm),
+            sd_flipper_length = sd(flipper_length_mm),
+            sample_size = n(),
+            variance = var(flipper_length_mm),
+            standard_error = sd(flipper_length_mm)/sqrt(n()),
+            var_flipper_length = var(flipper_length_mm))
+
+penguins_f_summary
+
+leveneTest(flipper_length_mm ~ species, data = penguins_f)
+```
+
+Lavene's - if n() is great enough, you *will* get a significant difference no matter what, so be careful to look and think and check guideline
+- 0.05782 Pr number is greater than our usual significance value of .05, so we will retain the null that the variance is equal
+
+## How to make a Beeswarm plot
+- Show some summary statistics
+- Mean =/- 1 sd
+- Generic plot is better than our modificaitons, modifications for example
+- Add geom points to layer graphs on top of each other. 
+
+```{r}
+ggplot() +
+  geom_beeswarm(data = penguins_f, 
+                aes(x = species, y = flipper_length_mm),
+                color = "darkturquoise",
+                size = 3,
+                alpha = 0.5) +
+  geom_point(data = penguins_f_summary, aes(x = species, y = mean_flipper_length),
+             size = 4) +
+  geom_errorbar(data = penguins_f_summary,
+                aes(x = species,
+                    ymax = mean_flipper_length + sd_flipper_length,
+                    ymin = mean_flipper_length - sd_flipper_length),
+                width = 0.1)
+```
+
+### One-way ANOVA
+
+- Start by aov -> runs type 1 ANOVA (If everything is matched (balanced design, equal sample size etc, then it's the same as a type III anova))
+-- F statistic is the ratio of the between group variance divided by the within group variance (Variance = sum of squares)
+- 2e-16*** is the smallest number that R will display (Super small propbability that the populations are all from a population that has the same mean)
+
+```{r}
+penguin_aov <- aov(flipper_length_mm ~ species, data = penguins_f)
+summary(penguin_aov)
+
+TukeyHSD(penguin_aov)
+```
+
+- All of the pairwise adjusted values from Tukey's are below .05, so the post-hoc test tells us that there is a significant difference between each combination of the groups.
+
+#### If you have very different sample sizes, unbalanced designs, differences between groups and distributions etc then do a type III ANOVA with the car package:
+-lm stands for linear model
+
+```{r}
+penguin_lm <- lm(flipper_length_mm ~ species, data = penguins_f)
+penguin_aov_t3 <- Anova(penguin_lm, type = "III")
+penguin_aov_t3
+```
+
+- Most of the time, the aov and the type III are very similar (Unless egregiously unbalanced) (F value of species is very similar to the one above as well) (If perfectly balanced, then type I, II, and III will give you the exact same value)
+
+
+
+
 
 
 
